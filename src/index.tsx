@@ -1,4 +1,4 @@
-import { type ComponentPropsWithRef, type Ref, useCallback, useEffect, useEffectEvent, useId, useRef, useState } from "react"
+import { type ComponentPropsWithRef, type Ref, useCallback, useEffect, useEffectEvent, useId, useImperativeHandle, useRef, useState } from "react"
 
 /**
  * Hikvision 播放解码模式。
@@ -944,15 +944,18 @@ function getWindowIndex(player: HikvisionPlayerInstance, windowIndex?: number): 
     return windowIndex ?? player.currentWindowIndex ?? 0
 }
 
-function assignRef<T>(ref: Ref<T> | undefined, value: T): void {
-    if (!ref) return
+type RefCleanup = (() => void) | undefined
+
+function assignRef<T>(ref: Ref<T> | undefined, value: T | null): RefCleanup {
+    if (!ref) return undefined
 
     if (typeof ref === "function") {
-        ref(value)
-        return
+        const cleanup = ref(value)
+        return typeof cleanup === "function" ? cleanup : undefined
     }
 
     ref.current = value
+    return undefined
 }
 
 function joinClassNames(...values: Array<string | undefined>): string | undefined {
@@ -1188,17 +1191,9 @@ export function Player(props: PlayerProps) {
     const handleThumbnailsEvent = useEffectEvent(optionalCallback(onThumbnailsEvent))
     const handleTalkPluginError = useEffectEvent(optionalCallback(onTalkPluginError))
 
-    const setRootRef = useCallback(
-        (node: HTMLDivElement | null) => {
-            assignRef(rootRef, node)
-        },
-        [rootRef],
-    )
+    const setRootRef = useCallback((node: HTMLDivElement | null) => assignRef(rootRef, node), [rootRef])
 
-    useEffect(() => {
-        assignRef(player, playerRef.current)
-        return () => assignRef(player, null)
-    }, [player])
+    useImperativeHandle<HikvisionPlayerInstance | null, HikvisionPlayerInstance | null>(player, () => instance, [instance])
 
     useEffect(() => {
         if (typeof window === "undefined" || typeof document === "undefined") return undefined
@@ -1243,7 +1238,6 @@ export function Player(props: PlayerProps) {
 
                 playerRef.current = nextPlayer
                 setInstance(nextPlayer)
-                assignRef(player, nextPlayer)
 
                 Promise.resolve(nextPlayer.JS_SetWindowControlCallback?.(events))
                     .then(() => notifyReady(nextPlayer))
@@ -1257,7 +1251,6 @@ export function Player(props: PlayerProps) {
 
             playerRef.current = null
             setInstance(null)
-            assignRef(player, null)
 
             if (!currentPlayer) return
 
@@ -1265,7 +1258,7 @@ export function Player(props: PlayerProps) {
             ignorePromise(currentPlayer.JS_StopTalk?.())
             ignorePromise(currentPlayer.JS_Destroy?.())
         }
-    }, [basePath, player, resolvedScriptUrl, viewportId])
+    }, [basePath, resolvedScriptUrl, viewportId])
 
     useEffect(() => {
         if (!instance || !autoResize) return undefined
@@ -1359,9 +1352,12 @@ export function Player(props: PlayerProps) {
     }, [connectTimeout, endTime, instance, keepDecoder, mode, playOptions, playbackMode, playing, src, startTime, token, windowIndex])
 
     return (
-        <div {...rootProps} className={joinClassNames(classNames?.root, className)} ref={setRootRef}>
-            <div className={classNames?.viewport} id={viewportId} ref={viewportRef} />
-        </div>
+        <>
+            <script async src={resolvedScriptUrl} />
+            <div {...rootProps} className={joinClassNames(classNames?.root, className)} ref={setRootRef}>
+                <div className={classNames?.viewport} id={viewportId} ref={viewportRef} />
+            </div>
+        </>
     )
 }
 
