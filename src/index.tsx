@@ -924,8 +924,13 @@ declare global {
     }
 }
 
-const DEFAULT_ASSET_BASE_PATH = new URL("./assets/hikvision/", import.meta.url).toString()
+const DEFAULT_ASSET_BASE_PATH = "./assets/hikvision/"
 const scriptLoaders = new Map<string, Promise<HikvisionPluginConstructor>>()
+
+function resolveDefaultAssetBasePath(): string {
+    // 保持动态解析，避免消费端打包器把资源目录当作模块解析。
+    return new globalThis.URL(DEFAULT_ASSET_BASE_PATH, import.meta.url).toString()
+}
 
 function normalizeBasePath(basePath: string): string {
     return basePath.endsWith("/") ? basePath : `${basePath}/`
@@ -1120,7 +1125,7 @@ export function Player(props: PlayerProps) {
         player,
         classNames,
         className,
-        basePath: basePathProp = DEFAULT_ASSET_BASE_PATH,
+        basePath: basePathProp,
         scriptUrl,
         pluginOptions,
         playOptions,
@@ -1168,7 +1173,7 @@ export function Player(props: PlayerProps) {
     const playerRef = useRef<HikvisionPlayerInstance | null>(null)
     const [instance, setInstance] = useState<HikvisionPlayerInstance | null>(null)
 
-    const basePath = normalizeBasePath(basePathProp)
+    const basePath = normalizeBasePath(basePathProp ?? resolveDefaultAssetBasePath())
     const resolvedScriptUrl = scriptUrl ?? joinUrl(basePath, "h5player.min.js")
     const getPluginOptions = useEffectEvent((): typeof pluginOptions => pluginOptions)
     const getInitialSplit = useEffectEvent((): HikvisionSplit | undefined => split)
