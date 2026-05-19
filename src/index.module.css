@@ -1,0 +1,5 @@
+.root :global(.sub-wnd) {
+    border-width: 0 !important;
+    width: calc(100% / var(--hikvision-split)) !important;
+    height: calc(100% / var(--hikvision-split)) !important;
+}

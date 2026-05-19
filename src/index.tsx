@@ -1,4 +1,8 @@
-import { type ComponentPropsWithRef, type Ref, useCallback, useEffect, useEffectEvent, useId, useImperativeHandle, useRef, useState } from "react"
+import { type ComponentPropsWithRef, type Ref, FC, Fragment, useCallback, useEffect, useEffectEvent, useId, useImperativeHandle, useRef, useState } from "react"
+
+import { clsx, optionalFn } from "deepsea-tools"
+
+import styles from "./index.module.css"
 
 /**
  * Hikvision 播放解码模式。
@@ -700,6 +704,11 @@ export interface PlayerProps extends Omit<ComponentPropsWithRef<"div">, "childre
     classNames?: PlayerClassNames
 
     /**
+     * 是否显示边框
+     */
+    showBorder?: boolean
+
+    /**
      * Hikvision 静态资源目录。
      *
      * 默认使用包内 dist/assets/hikvision 资源。
@@ -963,11 +972,6 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null): RefCleanup {
     return undefined
 }
 
-function joinClassNames(...values: Array<string | undefined>): string | undefined {
-    const className = values.filter(Boolean).join(" ")
-    return className || undefined
-}
-
 function ignorePromise(value: unknown): void {
     if (value && typeof (value as Promise<unknown>).catch === "function") void (value as Promise<unknown>).catch(() => undefined)
 }
@@ -1110,63 +1114,59 @@ function buildPlayConfig(
     return config
 }
 
-function optionalCallback<T extends (...args: any[]) => unknown>(callback?: T): (...args: Parameters<T>) => ReturnType<T> | undefined {
-    return (...args: Parameters<T>) => callback?.(...args) as ReturnType<T> | undefined
-}
-
 /**
  * 无样式 Hikvision React 播放器组件。
  *
  * 根元素为 div，播放器挂载容器由组件内部创建；样式完全由调用方通过 className、style 或 classNames 控制。
  */
-export function Player(props: PlayerProps) {
-    const {
-        ref: rootRef,
-        player,
-        classNames,
-        className,
-        basePath: basePathProp,
-        scriptUrl,
-        pluginOptions,
-        playOptions,
-        src,
-        playing,
-        mode = 0,
-        windowIndex,
-        token,
-        keepDecoder = 0,
-        startTime,
-        endTime,
-        playbackMode,
-        split,
-        selectedWindow,
-        muted,
-        volume,
-        fullScreen,
-        connectTimeout,
-        interruptTime,
-        autoResize = true,
-        onReady,
-        onLoadError,
-        onPlaySuccess,
-        onPlayError,
-        onWindowSelect,
-        onPluginError,
-        onWindowOver,
-        onWindowOut,
-        onWindowUp,
-        onFullScreenChange,
-        onFirstFrame,
-        onPerformanceLack,
-        onStreamEnd,
-        onStreamHeadChanged,
-        onInterruptStream,
-        onElementChanged,
-        onThumbnailsEvent,
-        onTalkPluginError,
-        ...rootProps
-    } = props
-
+export const HikvisionPlayer: FC<PlayerProps> = ({
+    ref: rootRef,
+    player,
+    classNames,
+    className,
+    style,
+    showBorder,
+    basePath: basePathProp,
+    scriptUrl,
+    pluginOptions,
+    playOptions,
+    src,
+    playing,
+    mode = 0,
+    windowIndex,
+    token,
+    keepDecoder = 0,
+    startTime,
+    endTime,
+    playbackMode,
+    split = 1,
+    selectedWindow,
+    muted,
+    volume,
+    fullScreen,
+    connectTimeout,
+    interruptTime,
+    autoResize = true,
+    onReady,
+    onLoadError,
+    onPlaySuccess,
+    onPlayError,
+    onWindowSelect,
+    onPluginError,
+    onWindowOver,
+    onWindowOut,
+    onWindowUp,
+    onFullScreenChange,
+    onFirstFrame,
+    onPerformanceLack,
+    onStreamEnd,
+    onStreamHeadChanged,
+    onInterruptStream,
+    onElementChanged,
+    onThumbnailsEvent,
+    onTalkPluginError,
+    ...rootProps
+}) => {
     const reactId = useId()
     const viewportId = `hikvision_player_${sanitizeId(reactId)}`
     const viewportRef = useRef<HTMLDivElement | null>(null)
@@ -1177,24 +1177,24 @@ export function Player(props: PlayerProps) {
     const resolvedScriptUrl = scriptUrl ?? joinUrl(basePath, "h5player.min.js")
     const getPluginOptions = useEffectEvent((): typeof pluginOptions => pluginOptions)
     const getInitialSplit = useEffectEvent((): HikvisionSplit | undefined => split)
-    const notifyReady = useEffectEvent(optionalCallback(onReady))
-    const notifyLoadError = useEffectEvent(optionalCallback(onLoadError))
-    const notifyPlaySuccess = useEffectEvent(optionalCallback(onPlaySuccess))
-    const notifyPlayError = useEffectEvent(optionalCallback(onPlayError))
-    const handleWindowSelect = useEffectEvent(optionalCallback(onWindowSelect))
-    const handlePluginError = useEffectEvent(optionalCallback(onPluginError))
-    const handleWindowOver = useEffectEvent(optionalCallback(onWindowOver))
-    const handleWindowOut = useEffectEvent(optionalCallback(onWindowOut))
-    const handleWindowUp = useEffectEvent(optionalCallback(onWindowUp))
-    const handleFullScreenChange = useEffectEvent(optionalCallback(onFullScreenChange))
-    const handleFirstFrame = useEffectEvent(optionalCallback(onFirstFrame))
-    const handlePerformanceLack = useEffectEvent(optionalCallback(onPerformanceLack))
-    const handleStreamEnd = useEffectEvent(optionalCallback(onStreamEnd))
-    const handleStreamHeadChanged = useEffectEvent(optionalCallback(onStreamHeadChanged))
-    const handleInterruptStream = useEffectEvent(optionalCallback(onInterruptStream))
-    const handleElementChanged = useEffectEvent(optionalCallback(onElementChanged))
-    const handleThumbnailsEvent = useEffectEvent(optionalCallback(onThumbnailsEvent))
-    const handleTalkPluginError = useEffectEvent(optionalCallback(onTalkPluginError))
+    const notifyReady = useEffectEvent(optionalFn(onReady))
+    const notifyLoadError = useEffectEvent(optionalFn(onLoadError))
+    const notifyPlaySuccess = useEffectEvent(optionalFn(onPlaySuccess))
+    const notifyPlayError = useEffectEvent(optionalFn(onPlayError))
+    const handleWindowSelect = useEffectEvent(optionalFn(onWindowSelect))
+    const handlePluginError = useEffectEvent(optionalFn(onPluginError))
+    const handleWindowOver = useEffectEvent(optionalFn(onWindowOver))
+    const handleWindowOut = useEffectEvent(optionalFn(onWindowOut))
+    const handleWindowUp = useEffectEvent(optionalFn(onWindowUp))
+    const handleFullScreenChange = useEffectEvent(optionalFn(onFullScreenChange))
+    const handleFirstFrame = useEffectEvent(optionalFn(onFirstFrame))
+    const handlePerformanceLack = useEffectEvent(optionalFn(onPerformanceLack))
+    const handleStreamEnd = useEffectEvent(optionalFn(onStreamEnd))
+    const handleStreamHeadChanged = useEffectEvent(optionalFn(onStreamHeadChanged))
+    const handleInterruptStream = useEffectEvent(optionalFn(onInterruptStream))
+    const handleElementChanged = useEffectEvent(optionalFn(onElementChanged))
+    const handleThumbnailsEvent = useEffectEvent(optionalFn(onThumbnailsEvent))
+    const handleTalkPluginError = useEffectEvent(optionalFn(onTalkPluginError))
 
     const setRootRef = useCallback((node: HTMLDivElement | null) => assignRef(rootRef, node), [rootRef])
 
@@ -1357,13 +1357,20 @@ export function Player(props: PlayerProps) {
     }, [connectTimeout, endTime, instance, keepDecoder, mode, playOptions, playbackMode, playing, src, startTime, token, windowIndex])
 
     return (
-        <>
+        <Fragment>
             <script async src={resolvedScriptUrl} />
-            <div {...rootProps} className={joinClassNames(classNames?.root, className)} ref={setRootRef}>
+            <div
+                {...rootProps}
+                className={clsx(!showBorder && styles["root"], classNames?.root, className)}
+                style={{ ["--hikvision-split" as "width"]: split, ...style }}
+                ref={setRootRef}
+            >
                 <div className={classNames?.viewport} id={viewportId} ref={viewportRef} />
             </div>
-        </>
+        </Fragment>
     )
 }
 
-export default Player
+HikvisionPlayer.displayName = "HikvisionPlayer"
+
+export default HikvisionPlayer
